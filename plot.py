@@ -3,6 +3,9 @@ import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider
 
 ONLY_SHOW_BOUNDED        = True   # filter multi-plot and stats to only runs that remain bound after the impulse
+PERIOD_UNIT              = "days"  # "days" or "years" — x-axis unit in ecc stats plot
+SHOW_ECC_HIST            = True   # show eccentricity histogram panel on the right of the stats plot
+PERIOD_MAX               = 100000   # max period shown on scatter x-axis (in PERIOD_UNIT); None = no limit
 
 
 
@@ -195,8 +198,8 @@ def _attach_slider(sim, fig, dot1, dot2, mode):
 # =============================================================================
 
 _CATEGORIES = [
-    (0.1, 'circular',   'royalblue'),
-    (1.0, 'elliptical', 'crimson'),
+    (0.1, 'circular',   'black'),
+    (1.0, 'elliptical', 'black'),
     (None,'hyperbolic', 'gold'),
 ]
 
@@ -267,23 +270,44 @@ def show_ecc_stats(results):
         if ONLY_SHOW_BOUNDED and ecc >= 1:
             continue
 
-        log_p = np.log10(r['period'])
+        scale = 365.25 if PERIOD_UNIT == "days" else 1.0
+        log_p = np.log10(r['period'] * scale)
         label, _ = _cat(ecc)
         by_cat[label]['x'].append(log_p)
         by_cat[label]['y'].append(ecc)
 
-    _, ax = plt.subplots(figsize=(9, 5))
+    if SHOW_ECC_HIST:
+        fig, (ax, ax_hist) = plt.subplots(
+            1, 2, figsize=(11, 5),
+            gridspec_kw={'width_ratios': [4, 1]},
+            sharey=True
+        )
+        fig.subplots_adjust(wspace=0.05)
+    else:
+        fig, ax = plt.subplots(figsize=(9, 5))
+        ax_hist = None
 
     for _, label, color in _CATEGORIES:
         xs = by_cat[label]['x']
         ys = by_cat[label]['y']
         if xs:
             ax.scatter(xs, ys, c=color, label=f'{label}  (n={len(xs)})',
-                       s=18, alpha=0.7, linewidths=0)
+                       s=5, alpha=0.7, linewidths=0)
 
-    ax.set_xlabel('log₁₀(post-impulse orbital period  [yr])')
+    ax.set_xlabel(f'log₁₀(post-impulse orbital period  [{PERIOD_UNIT}])')
     ax.set_ylabel('Post-impulse eccentricity')
     ax.legend(loc='upper left', fontsize=9)
     ax.set_title(f'Post-impulse eccentricity vs orbital period  —  {len(flat)} runs')
+    if PERIOD_MAX is not None:
+        ax.set_xlim(right=np.log10(PERIOD_MAX))
+
+    if ax_hist is not None:
+        all_ecc = np.sort([e for cat in by_cat.values() for e in cat['y'] if e < 1])
+        cdf = np.arange(1, len(all_ecc) + 1) / len(all_ecc)
+        ax_hist.plot(cdf, all_ecc, color='black', linewidth=1.2)
+        ax_hist.set_xlabel('CDF')
+        ax_hist.set_xlim(0, 1)
+        ax_hist.tick_params(labelleft=False)
+
     plt.tight_layout()
     plt.show()

@@ -34,7 +34,7 @@ VERBOSE                  = False  # print per-run info (slow for large ITERATION
 MULTI_PLOT_WINDOW        = 100    # steps shown either side of the impulse
 
 # --- Multi-run sweep ---
-ITERATIONS               = 20000  # runs per group
+ITERATIONS               = 500000  # runs per group
 SEPERATION_GROUPS        = 1      # number of groups in the sweep; 1 when using period
 USE_PERIOD               = True   # False → sweep separations;  True → draw periods
 INITIAL_SEPARATION       = 600    # starting separation  [sim length units]
@@ -53,31 +53,39 @@ IMPULSE_MEAN             = 0      # normal: mean kick speed  [sim velocity units
 IMPULSE_SIGMA            = 8636   # normal: sigma kick speed
 POST_IMPULSE_MASS1       = 1.4    # body 1 remnant mass after kick  [M☉]  (e.g. neutron star)
 MASS_LOSS_MEAN           = 3.9    # mean ejecta mass  [M☉]; initial mass = POST_IMPULSE_MASS1 + drawn loss
-MASS_LOSS_SIGMA          = 1.8    # sigma of ejecta draw; set 0 for a fixed loss equal to MASS_LOSS_MEAN
-DIRECTIONAL_BIAS         = 0      # 0 to 1: fraction of kicks in the preferred direction (vs isotropic random)
+MASS_LOSS_SIGMA          = 0.7    # sigma of ejecta draw; set 0 for a fixed loss equal to MASS_LOSS_MEAN
+DIRECTIONAL_BIAS         = 0    # 0 to 1: fraction of kicks in the preferred direction (vs isotropic random)
 BIAS_DIRECTION           = "velocity"  # "velocity" → along v1;  "orthogonal" → perpendicular to orbital plane
 
 # --- Distance bounds ---
 CHECK_DIST               = True
-DISTANCE_MIN             = 50
-DISTANCE_MAX             = 5000
+DISTANCE_MIN             = 40 #periastron distance must be greater than this to be included in results  [sim length units]
+DISTANCE_MAX             = 600 #periastron distance must be less than this to be included in results  [sim length units]
 
 STOP_EARLY = True  # stop if hyperbolic orbits are detected
-
-_DIST_MIN_SQ = DISTANCE_MIN ** 2
-_DIST_MAX_SQ = DISTANCE_MAX ** 2
 
 # =============================================================================
 # SIMULATION
 # =============================================================================
+def _worker_init():
+    import signal, ctypes
+    signal.signal(signal.SIGINT, signal.SIG_IGN)  # workers ignore Ctrl+C; main process handles it
+    ctypes.windll.kernel32.SetPriorityClass(
+        ctypes.windll.kernel32.GetCurrentProcess(), 0x00000080)
+
+def _set_high_priority():
+    import ctypes
+    ctypes.windll.kernel32.SetPriorityClass(
+        ctypes.windll.kernel32.GetCurrentProcess(), 0x00000080)
+
 def main(run_idx=1, seperation=4500):
     # --- Parameters ---
-    dt           = 0.01
-    total_time   = 3
-    impulse_time = 1.5
+    dt           = 0.007
+    total_time   = 1.1
+    impulse_time = 1
     e = 0
 
-    # --- Initial conditions ---
+    # --- Initial conditions --- 
     mass2 = 15
     mass_loss = MASS_LOSS_MEAN if MASS_LOSS_SIGMA == 0 else abs(np.random.normal(MASS_LOSS_MEAN, MASS_LOSS_SIGMA))
     mass1 = POST_IMPULSE_MASS1 + mass_loss
@@ -105,6 +113,7 @@ def main(run_idx=1, seperation=4500):
     h   = np.cross(r0, v0)
     eps = 0.5*np.linalg.norm(v0)**2 - step.G*M/np.linalg.norm(r0)
     ecc = np.sqrt(max(0.0, 1 + 2*eps*np.linalg.norm(h)**2 / (step.G*M)**2))
+    r_peri = np.dot(h, h) / (step.G * M * (1 + ecc))
 
     if VERBOSE:
         if USE_PERIOD:
@@ -149,14 +158,13 @@ def main(run_idx=1, seperation=4500):
     ecc_imp = None
     flag = 1
 
+    if CHECK_DIST and (r_peri < DISTANCE_MIN or r_peri > DISTANCE_MAX):
+        flag = 0
+
     # --- Integration loop (Velocity Verlet in step.py) ---
     for i in range(n_steps):
-        if CHECK_DIST:
-            _d = position1 - position2
-            if np.dot(_d, _d) < _DIST_MIN_SQ or np.dot(_d, _d) > _DIST_MAX_SQ:
-                flag = 0
-                break
-
+        if flag == 0:
+            break
         if APPLY_IMPULSE and i == impulse_step:
             impulse_pos1 = position1.copy()
             impulse_pos2 = position2.copy()
@@ -187,6 +195,11 @@ def main(run_idx=1, seperation=4500):
             if STOP_EARLY and ecc_imp >= 1:
                 flag = 0
                 break
+            if CHECK_DIST:
+                r_peri_imp = np.dot(h_imp, h_imp) / (step.G * M * (1 + ecc_imp))
+                if r_peri_imp < DISTANCE_MIN or r_peri_imp > DISTANCE_MAX:
+                    flag = 0
+                    break
             if eps_imp < 0:
                 semi_major_axis = -step.G * M / (2 * eps_imp)
                 period = 2 * np.pi * np.sqrt(semi_major_axis**3 / (step.G * M))
@@ -288,10 +301,20 @@ def main(run_idx=1, seperation=4500):
 
 
 if __name__ == '__main__':
+    _set_high_priority()
     _t0 = time.time()
     if USE_PERIOD:
-        with multiprocessing.Pool() as pool:
-            results = np.array(pool.map(main, range(1, ITERATIONS + 1)))
+        with multiprocessing.Pool(initializer=_worker_init) as pool:
+            try:
+                async_result = pool.map_async(main, range(1, ITERATIONS + 1))
+                while not async_result.ready():
+                    async_result.wait(timeout=0.5)
+                results = np.array(async_result.get())
+            except KeyboardInterrupt:
+                pool.terminate()
+                pool.join()
+                print("\nInterrupted.")
+                exit()
     else:
         _sweep = [INITIAL_SEPARATION * SEPARATION_SCALE**j for j in range(SEPERATION_GROUPS)]
         results = np.array(
