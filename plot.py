@@ -292,7 +292,7 @@ def show_ecc_stats(results):
         ys = by_cat[label]['y']
         if xs:
             ax.scatter(xs, ys, c=color, label=f'{label}  (n={len(xs)})',
-                       s=5, alpha=0.7, linewidths=0)
+                       s=10, alpha=0.7, linewidths=0)
 
     ax.set_xlabel(f'log₁₀(post-impulse orbital period  [{PERIOD_UNIT}])')
     ax.set_ylabel('Post-impulse eccentricity')

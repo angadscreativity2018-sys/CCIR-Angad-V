@@ -48,13 +48,13 @@ RANDOM_PHASE             = True   # subtract 0–1 orbital period from impulse t
 IMPULSE_DIST             = "normal"  # "beta" or "normal"
 IMPULSE_ALPHA            = 3.05   # beta: shape α
 IMPULSE_BETA             = 14.6   # beta: shape β
-IMPULSE_SCALE            = 17730  # beta: speed = Beta(α,β) × SCALE
+IMPULSE_SCALE            = 17730/3  # beta: speed = Beta(α,β) × SCALE
 IMPULSE_MEAN             = 0      # normal: mean kick speed  [sim velocity units]
 IMPULSE_SIGMA            = 8636   # normal: sigma kick speed
 POST_IMPULSE_MASS1       = 1.4    # body 1 remnant mass after kick  [M☉]  (e.g. neutron star)
-MASS_LOSS_MEAN           = 3.9    # mean ejecta mass  [M☉]; initial mass = POST_IMPULSE_MASS1 + drawn loss
+MASS_LOSS_MEAN           = 3.6    # mean ejecta mass  [M☉]; initial mass = POST_IMPULSE_MASS1 + drawn loss
 MASS_LOSS_SIGMA          = 0.7    # sigma of ejecta draw; set 0 for a fixed loss equal to MASS_LOSS_MEAN
-DIRECTIONAL_BIAS         = 0    # 0 to 1: fraction of kicks in the preferred direction (vs isotropic random)
+DIRECTIONAL_BIAS         = .9    # 0 to 1: fraction of kicks in the preferred direction (vs isotropic random)
 BIAS_DIRECTION           = "velocity"  # "velocity" → along v1;  "orthogonal" → perpendicular to orbital plane
 
 # --- Distance bounds ---
@@ -80,9 +80,9 @@ def _set_high_priority():
 
 def main(run_idx=1, seperation=4500):
     # --- Parameters ---
-    dt           = 0.007
-    total_time   = 1.1
-    impulse_time = 1
+    dt           = 0.01
+    total_time   = .5
+    impulse_time = .5
     e = 0
 
     # --- Initial conditions --- 
