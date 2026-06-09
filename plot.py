@@ -1,11 +1,18 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider
+from pathlib import Path
+
 
 ONLY_SHOW_BOUNDED        = True   # filter multi-plot and stats to only runs that remain bound after the impulse
 PERIOD_UNIT              = "days"  # "days" or "years" — x-axis unit in ecc stats plot
 SHOW_ECC_HIST            = True   # show eccentricity histogram panel on the right of the stats plot
-PERIOD_MAX               = 100000   # max period shown on scatter x-axis (in PERIOD_UNIT); None = no limit
+PERIOD_MIN               = 1       # min period shown on scatter x-axis (in PERIOD_UNIT); None = no limit
+PERIOD_MAX               = 10000   # max period shown on scatter x-axis (in PERIOD_UNIT); None = no limit
+SHOW_DENSITY_BACKGROUND  = False   # show hexbin density background in stats plot; only makes sense with a large number of runs
+DENSITY_GRIDSIZE         = 55
+SAVE_ECC_STATS           = False
+ECC_STATS_FILENAME       = "Figures/figure_1a_maxwellian.png"
 
 
 
@@ -198,8 +205,8 @@ def _attach_slider(sim, fig, dot1, dot2, mode):
 # =============================================================================
 
 _CATEGORIES = [
-    (0.1, 'circular',   'black'),
-    (1.0, 'elliptical', 'black'),
+    (0.1, 'circular',   'red'),
+    (1.0, 'elliptical', 'red'),
     (None,'hyperbolic', 'gold'),
 ]
 
@@ -271,9 +278,11 @@ def show_ecc_stats(results):
             continue
 
         scale = 365.25 if PERIOD_UNIT == "days" else 1.0
-        log_p = np.log10(r['period'] * scale)
+        period = r['period'] * scale
+        if not np.isfinite(period) or period <= 0:
+            continue
         label, _ = _cat(ecc)
-        by_cat[label]['x'].append(log_p)
+        by_cat[label]['x'].append(period)
         by_cat[label]['y'].append(ecc)
 
     if SHOW_ECC_HIST:
@@ -287,27 +296,49 @@ def show_ecc_stats(results):
         fig, ax = plt.subplots(figsize=(9, 5))
         ax_hist = None
 
+    all_x = [x for cat in by_cat.values() for x in cat['x']]
+    all_y = [y for cat in by_cat.values() for y in cat['y']]
+    if SHOW_DENSITY_BACKGROUND and all_x:
+        ax.hexbin(
+            all_x, all_y,
+            gridsize=DENSITY_GRIDSIZE,
+            xscale='log',
+            extent=(np.log10(PERIOD_MIN), np.log10(PERIOD_MAX), 0, 1),
+            cmap='Greys',
+            mincnt=1,
+            linewidths=0,
+            alpha=0.55,
+        )
+
     for _, label, color in _CATEGORIES:
         xs = by_cat[label]['x']
         ys = by_cat[label]['y']
         if xs:
             ax.scatter(xs, ys, c=color, label=f'{label}  (n={len(xs)})',
-                       s=10, alpha=0.7, linewidths=0)
+                       s=.2, alpha=0.35, linewidths=0)
 
-    ax.set_xlabel(f'log₁₀(post-impulse orbital period  [{PERIOD_UNIT}])')
-    ax.set_ylabel('Post-impulse eccentricity')
+    ax.set_xscale('log')
+    ax.set_xlabel(f'Period ({PERIOD_UNIT})')
+    ax.set_ylabel('Eccentricity')
     ax.legend(loc='upper left', fontsize=9)
-    ax.set_title(f'Post-impulse eccentricity vs orbital period  —  {len(flat)} runs')
-    if PERIOD_MAX is not None:
-        ax.set_xlim(right=np.log10(PERIOD_MAX))
+    ax.set_title(f'Post-impulse eccentricity vs orbital period  -  {len(flat)} runs')
+    ax.set_ylim(-0.04, 1.05)
+    if PERIOD_MIN is not None or PERIOD_MAX is not None:
+        ax.set_xlim(left=PERIOD_MIN, right=PERIOD_MAX)
 
     if ax_hist is not None:
         all_ecc = np.sort([e for cat in by_cat.values() for e in cat['y'] if e < 1])
-        cdf = np.arange(1, len(all_ecc) + 1) / len(all_ecc)
-        ax_hist.plot(cdf, all_ecc, color='black', linewidth=1.2)
+        if len(all_ecc):
+            cdf = np.arange(1, len(all_ecc) + 1) / len(all_ecc)
+            ax_hist.plot(cdf, all_ecc, color='black', linewidth=1.2)
         ax_hist.set_xlabel('CDF')
         ax_hist.set_xlim(0, 1)
+        ax_hist.set_ylim(ax.get_ylim())
         ax_hist.tick_params(labelleft=False)
 
     plt.tight_layout()
+    if SAVE_ECC_STATS:
+        out = Path(ECC_STATS_FILENAME)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        fig.savefig(out, dpi=250, bbox_inches='tight')
     plt.show()
