@@ -1,0 +1,205 @@
+================================================================================
+ DNS (DOUBLE NEUTRON STAR) WORK LOG
+================================================================================
+ Population-synthesis tuning of the Be/X-ray -> DNS channel in main.py
+ Goal: make the simulated post-second-SN (period, eccentricity) cloud reproduce
+ the 18 observed Galactic DNS systems (_OBS_DNS in plot.py).
+================================================================================
+
+
+1. THE OBSERVED TARGET  (_OBS_DNS, 18 systems)
+--------------------------------------------------------------------------------
+ Periods span 0.078 d (J1946+2052) to 45.1 d (J1930-1852); most are tight.
+ Eccentricities are mostly low/moderate with a few high-e systems.
+
+ Summary statistics tuned against:
+     median period      0.80 days
+     10-90% period      0.14 - 14 days
+     median eccentricity 0.175
+     mean eccentricity   0.252
+     fraction P < 1 day  0.50
+     fraction e < 0.4    0.83
+     high-e tail         3 systems near e ~ 0.59-0.62
+                         (B1913+16, J1757-1854, J0509+3801)
+
+
+2. THE DNS LIFE CYCLE WE ARE MODELLING
+--------------------------------------------------------------------------------
+ From the standard formation diagram:
+
+   ZAMS binary
+     -> RLO (mass transfer 1)         primary loses envelope
+     -> He-star + SN -> NS1           FIRST supernova  (kick 1)
+     -> HMXB / Be X-ray binary        eccentric NS + massive companion
+     -> Common Envelope (CE)          orbit shrinks HARD, circularises
+     -> NS1 + He-star
+     -> Case BB RLO                   companion is ULTRA-STRIPPED onto NS1
+     -> Ultra-stripped SN -> NS2      SECOND supernova  (small kick, small mass loss)
+     -> recycled + young NS  =  DNS
+
+ The two physical levers that set the final (P, e) of a DNS are therefore:
+   (a) the CE + Case BB phase  -> shrinks and circularises the orbit
+   (b) the ultra-stripped 2nd SN -> only a little mass is lost, so the
+       Blaauw (symmetric mass-loss) eccentricity is small, plus a modest
+       natal kick that produces the high-e tail.
+
+ In the code these map onto the "MT2" (mass-transfer-2) block and the
+ "second supernova kick" block.
+
+
+3. PROBLEM 1 - THE ARTIFICIAL LEFT-HAND BARRIER
+--------------------------------------------------------------------------------
+ Symptom: the (P, e) scatter showed a sharp vertical wall at P ~ 1.5 days,
+ even with fully isotropic kicks (KICK_ANGLE = 180, KICK2_ANGLE = 180).
+ The observed short-period DNS sat to the LEFT of this wall, unreachable.
+
+ Diagnosis (by instrumenting the period at each stage over 20,000 runs):
+   - The MT2 step shrinks the period:  period *= MT2_PERIOD_FACTOR (=0.1).
+   - It was then clamped by a HARDCODED floor:  max(period, 1.0/365.25),
+     i.e. exactly 1 day.
+   - 25.4% of all systems piled up exactly on that 1-day floor.
+   - The kickless second SN (Blaauw mass loss only) then widened that pile-up
+     to ~1.48 days -> the visible wall.
+
+ Fix: replaced the hardcoded 1-day floor with a real, low config knob.
+
+     NEW:  MT2_PERIOD_FLOOR_DAYS = 0.03          (main.py)
+     line: period = max(period * MT2_PERIOD_FACTOR,
+                        MT2_PERIOD_FLOOR_DAYS / 365.25)
+
+ Result (verified):
+     minimum period   1.48 d  ->  ~0.03-0.25 d
+     systems clamped  25.4%   ->  0%
+ The wall disappeared and the distribution now reaches into the observed cloud.
+
+
+4. PROBLEM 2 - CLOUD IN THE WRONG PLACE
+--------------------------------------------------------------------------------
+ Before tuning, the simulated cloud sat at median P ~ 8.6 d and median e ~ 0.47
+ - i.e. orbits too WIDE and too ECCENTRIC compared with real DNS:
+
+     metric            observed     sim (before)
+     median P           0.80 d        8.6 d      (10x too wide)
+     median e           0.18          0.47       (2.6x too high)
+     frac P < 1 day      0.50         0.09
+     frac e < 0.4        0.83         0.39
+
+ Root causes, read straight off the life-cycle diagram:
+   - The companion was NOT ultra-stripped enough, so the 2nd SN lost a lot of
+     mass -> large Blaauw eccentricity (~0.44, the dense streak in old plots).
+   - The CE / Case BB orbit shrink was too weak (period factor too large).
+   - Too much of the first-SN eccentricity survived into the DNS.
+
+
+5. PARAMETER SCAN AND FINAL FIT
+--------------------------------------------------------------------------------
+ A scan over (MT2_DELTA_M, MT2_ECC_FACTOR, MT2_PERIOD_FACTOR) and then the
+ second-SN kick (KICK2_V_NS, KICK2_CORE_MASS_FRAC, KICK2_SCATTER_SIGMA) was run,
+ comparing simulated and observed quantiles each time.
+
+ Key insight from the scan: KICK2_V_NS initially did NOTHING. The Mandel kick is
+     v = KICK2_V_NS * (M_CO2 - M_rem) / M_rem * (1 + scatter),  clamped at 0.
+ Because MT2 ultra-strips the companion to ~1.6 Msun, its CO core
+ (0.6 * 1.6 = 0.96 Msun) was LIGHTER than the 1.3 Msun remnant, so the kick
+ clamped to zero no matter how large KICK2_V_NS was. Raising
+ KICK2_CORE_MASS_FRAC to 0.95 makes the core exceed the remnant and reactivates
+ the kick, which is what produces the high-e tail.
+
+ FINAL PARAMETERS (main.py):
+
+     # ultra-stripped 2nd SN (Case BB RLO):
+     MT2_DELTA_M           = 8.4     # strips companion 10 -> 1.6 Msun
+     MT2_EFFICIENCY        = 0.001   # almost nothing accreted by NS1
+     MT2_ECC_FACTOR        = 0.4     # CE circularises (was 0.8)
+     MT2_PERIOD_FACTOR     = 0.02    # CE shrinks orbit hard (was 0.1)
+     MT2_PERIOD_FLOOR_DAYS = 0.03    # floor below observed minimum 0.078 d
+
+     # natal kick of the ultra-stripped SN (makes the high-e systems):
+     KICK2_V_NS            = 150.0   # km/s   (was 0)
+     KICK2_CORE_MASS_FRAC  = 0.95    # so CO core > remnant -> kick is active
+     KICK2_SCATTER_SIGMA   = 0.3
+     KICK2_ANGLE           = 180     # isotropic
+
+     # first SN kept isotropic:
+     KICK_ANGLE            = 180
+
+
+6. FINAL RESULT  (30,000 runs)
+--------------------------------------------------------------------------------
+     metric              observed     simulated
+     median period        0.80 d       0.81 d
+     10-90% period range  0.14-14 d    0.11-14 d
+     median eccentricity  0.175        0.201
+     mean eccentricity    0.252        0.232
+     frac P < 1 day        0.50        0.55
+     frac e < 0.4          0.83        0.88
+
+ The period distribution matches almost exactly. Eccentricities now cluster
+ low (0.1-0.4) with a tail toward 0.6, instead of the old blob at e ~ 0.4.
+
+ Remaining minor gap: the observed high-e tail (3 of 18 systems near e ~ 0.6)
+ is slightly fatter than the simulation's. This is within small-sample noise;
+ nudging KICK2_V_NS up toward ~200 thickens the tail if a closer match is wanted.
+
+
+7. GROUNDING THE KICKS AND MASSES IN PUBLISHED SIMULATIONS
+--------------------------------------------------------------------------------
+ The hand-tuned kicks/masses were then replaced with values taken from the
+ literature so the model reflects the actual DNS formation channel:
+
+   FIRST SN  (forms the recycled NS; left column of the life-cycle diagram)
+     - Normally-stripped He-star -> CCSN / ECSN.
+     - Kick: bimodal Maxwellian (Verbunt, Igoshev & Cator 2017; Vigna-Gomez 2018):
+         KICK1_SIGMA_LOW  = 30 km/s   (ECSN / low-mass, ~42%)
+         KICK1_SIGMA_HIGH = 265 km/s  (CCSN)
+       Consistent with Müller, Tauris et al. (2019) Table 2 CCSN models
+       (z9.6, z12: 21-64 km/s low;  s11.8: 278 km/s).
+     - Remnant mass POST_IMPULSE_MASS1 = 1.35 Msun (recycled DNS pulsar).
+     - IMPULSE_DIST = "bimodal".
+
+   SECOND SN  (ultra-stripped; right column: Case BB RLO -> ultra-stripped SN)
+     - Companion ultra-stripped to a ~1.5-1.6 Msun CO core by MT2 (Case BB RLO).
+     - Kick: bimodal Maxwellian grounded in Müller, Tauris et al. (2019) Table 2
+       ULTRA-STRIPPED models:
+         he2.8 -> 11 km/s          (low component)
+         he3.5 -> 238 km/s,  he3.0 -> 695 km/s   (high component)
+       Implemented as KICK2_DIST = "bimodal":
+         KICK2_SIGMA_LOW  = 30 km/s   (he2.8-like)
+         KICK2_SIGMA_HIGH = 200 km/s  (he3.0/he3.5-like)
+         KICK2_LOW_FRAC   = 0.8
+     - Remnant mass POST_IMPULSE_MASS2 = 1.33 Msun (he-model mean Mgrav).
+
+   KEY PHYSICS:  ultra-stripped SN kicks are NOT all small - the 3D sims show a
+   wide spread (11 - 695 km/s).  Bound DNS form preferentially from the LOW-kick
+   subset (Tauris et al. 2017), which is why the observed sample is mostly low-e.
+   The occasional moderate kick from the high component produces the high-e
+   systems (B1913+16, J1757-1854).  The model reproduces this self-consistently:
+   high-kick systems mostly unbind, the survivors are low-e with a thin high-e tail.
+
+   After grounding the kicks, MT2_PERIOD_FACTOR was retuned 0.035 -> 0.025 to
+   restore the period match (the stronger, realistic kicks widen the orbits).
+
+ Final match (full pipeline incl. aging):
+     metric              observed     simulated
+     median period        0.80 d       0.85 d
+     median eccentricity  0.175        0.190
+     mean eccentricity    0.252        0.242
+     frac P < 1 day        0.50        0.53
+     frac e < 0.4          0.83        0.83
+     frac e > 0.5 (tail)   0.17        0.11
+
+ Sources:
+   Müller, Tauris, Heger et al. 2019, MNRAS 484, 3307  (arXiv:1811.05483)
+   Tauris et al. 2017, ApJ 846, 170  (arXiv:1706.09438)
+   Vigna-Gómez et al. 2018, MNRAS 481, 4009  (arXiv:1805.07974)
+   Verbunt, Igoshev & Cator 2017, A&A 608, A57
+
+
+8. HOW TO REPRODUCE
+--------------------------------------------------------------------------------
+ - In plot.py set OBS_DATA_SET = "dns" so the 18 green DNS diamonds are shown.
+ - Run:  python main.py
+ - SHOW_ECC_STATS = True produces the (period, eccentricity) scatter plus the
+   side CDF panel comparing simulated vs observed eccentricity.
+
+================================================================================
