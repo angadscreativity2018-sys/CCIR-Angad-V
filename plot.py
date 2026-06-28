@@ -17,17 +17,17 @@ ECC_STATS_FILENAME       = "Figures/figure_1a_maxwellian.png"
 SHOW_OBSERVED_DATA       = True   # overlay observed Be/X-ray binary data on ecc stats plot
 SHOW_SEPARATE_BRANCH_CDFS = True   # show separate CDFs for low-e and high-e observed systems in the histogram panel
 SHOW_HMXB                = False   # overlay observed HMXB (orange) on the ecc stats plot
-PLOT_STAGE               = "hmxb"  # simulated stage shown: "hmxb" (post-1st-SN), "presn2" (after MT2, pre-2nd-SN), "dns" (final)
+PLOT_STAGE               = "dns"  # simulated stage shown: "hmxb" (post-1st-SN), "presn2" (after MT2, pre-2nd-SN), "dns" (final)
 
 # Restrict the (P, e) scatter AND the CDF panel to a period subset (sim + observed both filtered):
 #   "all"  : every system
 #   "low"  : short-period only, P <  PLOT_SUBSET_PSPLIT days
 #   "high" : long-period only,  P >= PLOT_SUBSET_PSPLIT days
-PLOT_SUBSET              = "high"  # "all", "low", or "high"
+PLOT_SUBSET              = "all"  # "all", "low", or "high"
 PLOT_SUBSET_PSPLIT       = 1.0    # period split [days] between low and high
 
 
-OBS_DATA_SET = "hmxb"   # "original", "additional", "both", "dns", "hmxb"
+OBS_DATA_SET = "dns"   # "original", "additional", "both", "dns", "hmxb"
 
 
 def _in_plot_subset(period_days):

@@ -1,10 +1,9 @@
 # The Orbital-Period Branches of Galactic DNS Systems
 ### Why the model makes one period peak, and what the data say it should make
 
-Companion study to `FIT_CAMPAIGN.md`.  Where that file fit the marginal (P, e)
-distributions globally, this one dissects the **shape of the orbital-period
-distribution** — the cumulative-frequency curve the eye reads as *branches* — and
-traces the single discrepancy that the global KS fit hides.
+This note dissects the **shape of the orbital-period distribution** — the
+cumulative-frequency curve the eye reads as *branches* — and traces the single
+discrepancy that a global marginal-(P, e) KS fit hides.
 
 Grounding reference throughout: **Tauris et al. 2017, ApJ 846, 170** ("Formation of
 Double Neutron Star Systems"), in particular §3.4 (CE survival), §4.4 / §5.1–5.3
@@ -246,7 +245,7 @@ kick-widened tight system would be over-recycled, not the slow 185 ms of J1930).
 2. **Add the spin period P_s as a third observable.**  The (Porb, P_s) correlation
    (Tauris Eq. 7, Fig. 6) is the independent discriminator between the tight
    (well-recycled, fast) and wide (marginally-recycled, slow) branches, and it would
-   break the period/He-core/radio-lifetime degeneracy documented in `FIT_CAMPAIGN.md`.
+   break the period/He-core/radio-lifetime degeneracy between those parameters.
 3. **Replace the hard 45-d cap and flat radio window with a physical detectability
    function** P_det(Porb, P_s, e) including the acceleration-search bias — this is the
    honest way to handle the tight-peak height and the wide-end cutoff together.
@@ -343,4 +342,4 @@ python fit.py global   # re-fit; the three CE knobs above are in PARAMS, DNS_SUB
 
 `fit.py` forces `CE_TWO_CHANNEL = True` and varies `CE_EFF_TIGHT / CE_EFF_WIDE /
 CE_WIDE_FRAC` (replacing the single `CE_EFFICIENCY`).  Set `CE_TWO_CHANNEL = False` in
-`main.py` to fall back to the single-channel best-fit of `FIT_CAMPAIGN.md`.
+`main.py` to fall back to a single-channel common envelope.

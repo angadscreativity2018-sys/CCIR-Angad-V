@@ -52,15 +52,14 @@ PARAMS = [
     #("PRESN_LOGPERIOD_SIGMA_HI", 0.4,  1.4),       # spread of input period: WIDTH of the cloud in P
                                                    # (needed to populate both edges, e.g. the ~1.2 d point)
     ("MASSLOSS_MEAN_HI",         1.5,  8.0),        # mass lost in the 1st SN: HMXB eccentricity + survival
-    #("KICK1_SIGMA",         80*31.55, 220*31.55),   # 1st-SN kick [km/s x 31.55]: HMXB ecc + survival fraction
     # === Two-channel CE — sets the DNS period and, crucially, the SPLIT between the two period
     #     branches.  alpha*lambda is the common-envelope efficiency: LOWER = stronger orbital
     #     shrink = TIGHTER DNS.  Fitting two values + their mix is what reproduces both branches. ===
     ("CE_EFF_TIGHT",             0.01, 0.60),        # strong-shrink channel -> the TIGHT branch (0.1-0.5 d)
     ("CE_EFF_WIDE",              0.60, 3),        # weak-shrink channel  -> the WIDE branch (4-45 d)
     ("CE_WIDE_FRAC",             0.10, 0.45),        # fraction taking the wide channel = weight in the wide tail
-    #("CE_MIN_PREPERIOD_DAYS",    0.0, 365.0),        # HMXB period at CE onset must exceed this to eject the envelope
-    #("HE_CORE_MASS",             2.0,  4.0),         # He-star mass after CE (also affects the CE shrink)
+    ("CE_MIN_PREPERIOD_DAYS",    0.0, 365.0),        # HMXB period at CE onset must exceed this to eject the envelope
+    ("HE_CORE_MASS",             2.0,  4.0),         # He-star mass after CE (also affects the CE shrink)
     # === DNS eccentricity ===
     ("CASE_BB_MASS_SCALE",       0.8,  1.4),         # scales SN mass loss -> Blaauw e and its rise with period (P,e slope)
     ("KICK2_SIGMA",              5.0,  50.0),         # 2nd-SN kick spread [km/s] (normal kick): ecc scatter
@@ -68,18 +67,19 @@ PARAMS = [
     ("RADIO_LIFETIME_MYR",       100,  10000),       # radio e-folding time tau: SHORT = young sample caught
                                                      # near birth (less GW evolution) = tighter, wider-tail match
     ("KICK2_MEAN",             10.0,  50.0),        # 2nd-SN kick mean [km/s]: adds eccentricity scatter
-    ("KICK1_MEAN",             30.0*31.55,  200.0*31.55),  # 1st-SN kick mean [km/s]: HMXB ecc + survival fraction
+    ("KICK1_MEAN",             30.0*31.55,  200.0*31.55),  # 1st-SN kick mean [sim units]: HMXB ecc + survival fraction
     # --- held fixed at sensible values (uncomment to fit) ---
     #("COMPANION_MASS",          8.0,  20.0),        # massive "other" star mass [Msun]: 1st-SN binding + CE envelope
     #("KICK2_LOW_FRAC",          0.6,  0.95),        # bimodal: fraction with the small kick (rest -> high-e tail)
     #("KICK_ANGLE",              0,    180),         # 1st-kick cone half-angle (~isotropic is fine)
-    #("GW_MAX_AGE_MYR",       4000,  12000),         # Milky Way disk age; usually fixed near 10 Gyr
+    ("GW_MAX_AGE_MYR",       4000,  12000),         # Milky Way disk age; usually fixed near 10 Gyr
+    #("KICK1_SIGMA",         80*31.55, 220*31.55),   # 1st-SN kick [km/s x 31.55]: HMXB ecc + survival fraction
 ]
 
 N_EVAL      = 2000     # binaries per objective evaluation (speed vs. noise)
 SEED        = 2026062 # fixed per-eval seed -> deterministic, smooth objective
-OUTLIER_W   = 4      # weight on the sim->obs (outlier) term; raise to punish outliers harder
-COVERAGE_K  = 4        # an obs point must have ~K simulated neighbours to count as 'covered'
+OUTLIER_W   = 9      # weight on the sim->obs (outlier) term; raise to punish outliers harder
+COVERAGE_K  = 15        # an obs point must have ~K simulated neighbours to count as 'covered'
                        # (~4 for a sparse subset like high-P so edge points e.g. ~1.2 d still
                        #  count; ~15 for the full 'all' sample)
                        # (coverage uses the K-th nearest sim point, so a lone stray sim point
@@ -90,16 +90,16 @@ PERIOD_KS_WEIGHT = 3 # match the period DISTRIBUTION (KS of log10 P).  KS in [0,
 ECC_KS_WEIGHT    = 3 # match the eccentricity DISTRIBUTION, weighted equally with period.  (The exact
                        # joint (P,e) correlation is NOT achievable -- Tauris sec 5.4 -- so we target
                        # the two marginals, which ARE, rather than over-weighting the 2D Chamfer.)
-FIT_STAGE   = "hmxb"   # which stage the error scores: "hmxb" (post-1st-SN), "dns" (final), or "both"
+FIT_STAGE   = "dns"   # which stage the error scores: "hmxb" (post-1st-SN), "dns" (final), or "both"
 # Fit only a period subset of the DNS (both obs target and sim cloud are restricted to it):
 #   "all"  : every DNS system
 #   "low"  : short-period subset, P <  DNS_SUBSET_PSPLIT days  (the close/merging systems)
 #   "high" : long-period subset,  P >= DNS_SUBSET_PSPLIT days  (the wide systems)
-DNS_SUBSET        = "high"   # "all", "low", or "high".  Use "all" when fitting the two-channel CE,
+DNS_SUBSET        = "low"   # "all", "low", or "high".  Use "all" when fitting the two-channel CE,
                             # since its whole purpose is to match BOTH period branches at once.
 DNS_SUBSET_PSPLIT = 1.0   # period split [days] between the low and high subsets
 HMXB_WEIGHT = 0.3      # weight of HMXB relative to DNS when FIT_STAGE == "both"
-MAX_EVALS   = 100      # optimiser budget (objective evaluations); 8 params need a few hundred
+MAX_EVALS   = 300      # optimiser budget (objective evaluations); 8 params need a few hundred
                        #   tip: run  `python fit.py global`  (differential evolution) for robustness
 # Survival floor penalty: stops the optimiser 'winning' by unbinding the whole
 # population (a huge kick -> few survivors -> tiny Chamfer mean).  Only engages below

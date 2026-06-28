@@ -63,39 +63,33 @@ order a few hundred million years. In other words, the model is telling us the o
 caught early in its radio-active life, before gravitational-wave decay has had time to reshape its orbit.
 That is a physical result in its own right, not just a correction.
 
-## The result
+## Where the model stands
 
-Once those three pieces are in, the model matches the data well enough that it cannot be distinguished
-from it statistically. The standard test here is the two-sample Kolmogorov–Smirnov statistic, which
-measures the largest gap between the simulated and observed distributions; with a sample of nineteen
-systems, the value above which we would reject the model is about 0.30. The fitted model sits at roughly
-0.11 to 0.17 in period and around 0.11 in eccentricity — comfortably below that threshold for both. The
-median simulated period of about 0.67 days matches the observed 0.63, and the median eccentricity of
-about 0.21 matches the observed 0.18. Every observed system, including the three awkward high-eccentricity
-short-period ones, falls inside the simulated cloud; those particular systems come from the rare
-large-kick tail of the second supernova. The honest way to state the headline is that the model
-reproduces the observed Galactic DNS period and eccentricity distributions to within the statistical
-resolution of the current sample.
+With those three pieces in place, the model brings the simulated systems into the right region of the
+period–eccentricity plane: it reaches the observed sub-day periods rather than stalling behind the old
+wall, it produces both the tight and the wide period branches at once through the two-channel common
+envelope, and it spreads eccentricity over the observed range, with most systems mildly eccentric and a
+thin tail of high-eccentricity ones produced by the rare large-kick events in the second supernova. The
+qualitative shape of the observed sample — where the systems sit and how they are spread — is reproduced
+by the physics rather than placed by hand.
 
-It is worth being clear about what is and is not pinned down. I ran the fit twice, independently, and the
-two runs agreed closely on the physics that matters — the common-envelope efficiency, both supernova
-kick strengths, the amount of mass lost in the first explosion, and the fraction of second supernovae
-that deliver a large kick all came out the same. What the two runs disagreed on were the three quantities
-that only shift the whole cloud left or right in period — the input period, the helium-core mass, and the
-radio lifetime. These trade off against one another, so only their combination is constrained, not each
-individually. This is exactly the behaviour you would expect, and it is reassuring: the scientifically
-interesting quantities, the supernova kicks, are well determined by the data, while the period
-normalisation is the part that would need an external prior to pin down further.
+It is worth being clear about what the data can and cannot pin down. The supernova kicks and the
+mass loss are the parts the orbital distribution genuinely constrains, because they directly set the
+eccentricity and how many systems survive each explosion. The overall period normalisation is much
+weaker — the input period, the helium-core mass, and the radio lifetime all simply slide the cloud left
+or right and trade off against one another, so the data fix their combination rather than any one of them.
+The honest reading is that the interesting physics, the kicks, is the well-determined part, while where
+the cloud sits in period would need an external handle to nail down.
 
-I also want to be honest about the limitations. The exact joint correlation between period and
-eccentricity is not perfectly reproducible — the kicks smear it out, as Tauris notes — so I target the
-two distributions separately rather than the full two-dimensional shape, which is achievable. With only
-nineteen systems the high-eccentricity tail is genuinely noisy, and I deliberately stopped tuning once
-both distributions fell below the rejection threshold, because pushing further would mean fitting the
-statistical noise of nineteen points rather than any real physics. And while the DNS stage matches well,
-the high-mass X-ray binary stage that precedes it matches only in the bulk and not in the tails, because
-the model does not yet include the observational selection or the tidal circularisation that shape the
-observed X-ray binary sample — that is a known next step, not something I am claiming to have solved.
+There are real limitations to be upfront about. The exact joint correlation between period and
+eccentricity is not perfectly reproducible — the kicks smear it out, as Tauris notes — so the right
+target is the two distributions separately rather than the full two-dimensional shape. With only of order
+twenty observed systems the high-eccentricity tail is genuinely noisy, so there is a limit to how much
+any model can be tuned before it is chasing the statistical scatter of a handful of points rather than
+physics. And while the DNS stage looks good, the high-mass X-ray binary stage that precedes it matches
+only in the bulk and not in the tails, because the model does not yet include the observational selection
+or the tidal circularisation that shape the observed X-ray binary sample — that is a known next step, not
+something I am claiming to have solved.
 
 ## Figures to show
 
@@ -110,6 +104,5 @@ matches the data." A hand-drawn version of the formation channel from the first 
 thing to open with, to orient the audience, and if there is time the parameter-importance analysis from
 `ml_sensitivity.py` makes a nice closing point about which physical knobs the data actually constrain.
 
-The fuller technical records, for questions, are in `FIT_CAMPAIGN.md` (the fit results, best-fit
-parameters and the degeneracy analysis), `PERIOD_BRANCHES.md` (the two-branch investigation and the
-detectability derivation), and `DNS_WORK.txt` (the earlier work log).
+The fuller technical records, for questions, are in `PERIOD_BRANCHES.md` (the two-branch investigation
+and the detectability derivation) and `DNS_WORK.txt` (the earlier work log).

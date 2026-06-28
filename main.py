@@ -219,7 +219,7 @@ CE_PREPERIOD_WIDTH = 0.25
 # 1-CE_WIDE_FRAC, and a weak-shrink (wide) value with probability CE_WIDE_FRAC.  Set
 # CE_TWO_CHANNEL = False to fall back to the single CE_EFFICIENCY above.  These three knobs are
 # fittable in fit.py.  Reference config (from search): 0.19 / 1.62 / 0.23 -> period KS 0.18 -> 0.14.
-CE_TWO_CHANNEL = True     # ON: per-system alpha*lambda from a tight+wide mix (both period branches).
+CE_TWO_CHANNEL = False     # ON: per-system alpha*lambda from a tight+wide mix (both period branches).
                           #     OFF: single CE_EFFICIENCY above (one period peak only).
 CE_EFF_TIGHT   = 0.19     # alpha*lambda of the STRONG-shrink channel.  SMALL -> orbit collapses hard
                           #     -> short post-CE period -> the TIGHT DNS branch (0.1-0.5 d peak).
@@ -299,11 +299,11 @@ RADIO_LIFETIME_MYR    = 1000       # recycled-pulsar radio e-folding time tau [M
 # detectability once P_orb drops to a few hours.  Modelled as a logistic detection probability in
 # log10(P_orb): ~0 far below ACCEL_P50_DAYS, 0.5 at it, ~1 well above.  OFF by default (the bulk of
 # the period selection is the merger/radio window above; enable to test the tight-orbit suppression).
-ACCEL_BIAS     = False             # down-weight very tight orbits (acceleration smearing)
+ACCEL_BIAS     = True             # down-weight very tight orbits (acceleration smearing)
 ACCEL_P50_DAYS = 0.07              # P_orb at 50% acceleration-search detectability [days]
 ACCEL_WIDTH    = 0.25              # logistic width in log10(P_orb) [dex]
 
-
+# High P stuff
 PRESN_LOGPERIOD_MEAN_HI = 2.52349
 MASSLOSS_MEAN_HI        = 3.80086
 KICK1_SIGMA             = 88.26 * 31.55
@@ -318,7 +318,19 @@ RADIO_LIFETIME_MYR      = 2124.31
 KICK2_MEAN              = 28.044
 KICK1_MEAN              = 3019.17
 
-
+PRESN_LOGPERIOD_MEAN_HI = 2.67712
+MASSLOSS_MEAN_HI        = 4.10393
+CE_EFF_TIGHT            = 0.0994683
+CE_EFF_WIDE             = 2.65509
+CE_WIDE_FRAC            = 0.320986
+CE_MIN_PREPERIOD_DAYS   = 239.124
+HE_CORE_MASS            = 2.10408
+CASE_BB_MASS_SCALE      = 1.0709
+KICK2_SIGMA             = 9.56882
+RADIO_LIFETIME_MYR      = 100
+KICK2_MEAN              = 32.122
+KICK1_MEAN              = 3819.88
+GW_MAX_AGE_MYR          = 10081.2
 
 
 
